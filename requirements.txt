@@ -1,0 +1,6 @@
+flask
+requests
+google-generativeai
+pillow
+pydub
+python-pptx
