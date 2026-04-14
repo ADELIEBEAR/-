@@ -3123,6 +3123,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
   <nav class="sb-nav">
     <div class="nav-group">
       <div class="nav-group-label">생성 도구</div>
+      <button class="nav-btn" id="nav-script" onclick="gotoPage('script')"><span class="icon">📝</span>대본 생성</button>
       <button class="nav-btn active" id="nav-tts" onclick="gotoPage('tts')"><span class="icon">🎙️</span>TTS 음성 생성</button>
       <button class="nav-btn" id="nav-img" onclick="gotoPage('img')"><span class="icon">🎨</span>이미지 생성</button>
       <button class="nav-btn" id="nav-combo" onclick="gotoPage('combo')"><span class="icon">🎬</span>이미지 + 음성 동시</button>
@@ -3140,6 +3141,80 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
     <div><div class="topbar-title" id="tb-title">TTS 음성 생성</div><div style="font-size:12px;color:var(--tx2)" id="tb-sub">ElevenLabs API로 대본을 음성으로 변환합니다</div></div>
   </div>
   <div class="content">
+
+  <!-- ═══ 대본 생성 ═══ -->
+  <div class="page" id="page-script">
+    <div class="split">
+      <div class="split-left">
+        <div class="script-hdr">
+          <h3>채널 선택</h3>
+          <div style="display:flex;gap:5px;flex-wrap:wrap">
+            <button class="mtab active" id="sch-today"  onclick="switchSCh('today',this)" >📈 오늘경제TV</button>
+            <button class="mtab"        id="sch-ripple" onclick="switchSCh('ripple',this)">💎 리플XRP</button>
+            <button class="mtab"        id="sch-shiba"  onclick="switchSCh('shiba',this)" >🐕 시바이누</button>
+            <button class="mtab"        id="sch-crypto" onclick="switchSCh('crypto',this)">🔮 크립토툰</button>
+            <button class="mtab"        id="sch-stock"  onclick="switchSCh('stock',this)" >🖌️ 그려보는주식</button>
+          </div>
+        </div>
+        <div class="script-area">
+          <textarea class="script" id="sc-output" placeholder="대본이 여기에 생성됩니다...&#10;&#10;생성 후 → TTS 탭으로 보내기 버튼을 누르세요" readonly></textarea>
+        </div>
+        <div class="script-foot">
+          <span class="badge" id="sc-chars">0자</span>
+          <span class="badge" id="sc-paras">0문단</span>
+          <span style="flex:1"></span>
+          <button class="btn btn-ghost" onclick="scSendToTTS()" id="sc-send-btn" style="display:none">→ TTS로 보내기</button>
+          <button class="btn btn-ghost" onclick="scCopy()" id="sc-copy-btn" style="display:none">복사</button>
+        </div>
+      </div>
+      <div class="split-right w360">
+        <div class="panel-scroll" id="sc-panel-scroll">
+          <div class="panel-sec">
+            <div class="panel-hdr">🔑 Gemini API 키</div>
+            <div class="panel-body">
+              <div class="field-row"><input class="fi" type="password" id="sc-apikey" placeholder="AIza... (설정탭 키 자동사용)" /></div>
+              <div style="font-size:10px;color:var(--tx3)">설정탭에 Gemini 키 저장 시 자동 불러옴</div>
+            </div>
+          </div>
+          <div class="panel-sec">
+            <div class="panel-hdr">🔗 참고 URL (최대 5개)</div>
+            <div class="panel-body">
+              <div class="path-row" style="margin-bottom:6px">
+                <input class="fi" id="sc-url-inp" placeholder="뉴스/유튜브 URL 입력 후 Enter" onkeydown="if(event.key==='Enter')scAddUrl()" />
+                <button class="btn btn-ghost" onclick="scAddUrl()" style="padding:6px 10px">+</button>
+              </div>
+              <div id="sc-url-chips" style="display:flex;flex-direction:column;gap:4px">
+                <div style="font-size:11px;color:var(--tx3)">URL을 추가해주세요</div>
+              </div>
+            </div>
+          </div>
+          <div class="panel-sec">
+            <div class="panel-hdr">🎯 분석 방향</div>
+            <div class="panel-body">
+              <div class="field-row"><div class="field-label" id="sc-hint1-lbl">메인 테마 힌트</div><input class="fi" id="sc-hint1" placeholder="비우면 AI 자동 판단" /></div>
+              <div class="field-row"><div class="field-label" id="sc-hint2-lbl">소부장 힌트</div><input class="fi" id="sc-hint2" placeholder="비우면 AI 자동 판단" /></div>
+              <div class="field-row"><div class="field-label">추가 요청</div><textarea class="fi" id="sc-extra" rows="2" placeholder="추가로 강조할 내용..."></textarea></div>
+            </div>
+          </div>
+          <div class="panel-sec">
+            <div class="panel-hdr">🎭 톤</div>
+            <div class="panel-body">
+              <div class="model-tabs" id="sc-tone-tabs"></div>
+            </div>
+          </div>
+          <div class="panel-sec">
+            <div class="panel-hdr">📊 파이프라인</div>
+            <div class="panel-body">
+              <div id="sc-pipe" style="display:flex;flex-direction:column;gap:2px"></div>
+            </div>
+          </div>
+        </div>
+        <div class="panel-foot">
+          <button class="btn btn-primary" id="sc-gen-btn" onclick="scGenerate()" style="width:100%;padding:10px">분석 + 대본 생성 ↗</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- ═══ TTS ═══ -->
   <div class="page active" id="page-tts">
@@ -3374,6 +3449,7 @@ let refPaths={img:null, combo:null};
 let voiceTarget='tts'; // 어느 탭 목소리 선택 중인지
 
 const pageInfo={
+  script:  {title:'📝 대본 생성', sub:'Gemini AI로 채널별 맞춤 대본을 자동 생성합니다'},
   tts:     {title:'TTS 음성 생성',          sub:'ElevenLabs API로 대본을 음성으로 변환합니다'},
   img:     {title:'이미지 생성',             sub:'Gemini AI로 화풍 13종 중 선택해 대본을 이미지로 시각화합니다'},
   combo:   {title:'🎬 이미지 + 음성 동시 생성', sub:'구간마다 이미지 1장 + 음성 1개를 쌍으로 생성합니다'},
@@ -3388,6 +3464,7 @@ function gotoPage(p){
   $('tb-title').textContent=pageInfo[p]?.title||'';
   const subEl=$('tb-sub'); if(subEl) subEl.textContent=pageInfo[p]?.sub||'';
   if(p==='settings') loadSettings();
+  if(p==='script') scLoadApiKey();
 }
 
 function notify(msg,type=''){const n=$('notif');n.textContent=msg;n.className='notif show'+(type?' '+type:'');setTimeout(()=>n.classList.remove('show'),3200);}
@@ -3521,7 +3598,7 @@ window.addEventListener('load',()=>{
   bindTA('tts-script','tts-badge','tts-chars','tts-scenes');
   bindTA('img-script','img-badge','img-chars','img-scenes');
   bindTA('combo-script','combo-badge','combo-chars','combo-scenes');
-  loadKeyStatus(); loadTTSModels(); loadStyles();
+  loadKeyStatus(); loadTTSModels(); loadStyles(); scRenderTones();
   // ref image : file input 연결은 onclick에서 직접 처리
 });
 
@@ -3635,6 +3712,320 @@ async function ttsPreview(){
     currentAudio=new Audio(URL.createObjectURL(blob));currentAudio.play();notify('재생 중...','ok');
   }catch(e){notify('미리듣기 실패: '+e,'err');}
 }
+
+
+// ═══ 대본 생성 탭 JS ═══════════════════════════════════════════
+const SC_CHANNELS = {
+  today:  { name:'오늘경제TV', type:'stock',
+    tones:['전문·분석적','긴박·위기감','쉽고 친근한','냉철·객관적','기회·희망적'],
+    toneVals:['전문적이고 분석적인','위기감과 긴장감 있는','쉽고 친근한 설명체','냉철하고 객관적인','기회를 강조하는 희망적인'],
+    hints:['메인 테마 (예: 방산, AI)','소부장 힌트 (예: 반도체 소재)'],
+    sample:`여러분, 요즘 주변에서 반도체, AI 이야기로 돈 벌었다는 소리는 들리는데, 막상 내 주식 계좌를 열어보면 파란 불만 가득해서 속상하신 분들 참 많으시죠? 반가워요, 여러분의 계좌를 확실하게 심폐소생술 해드릴 '오늘경제TV' 채널이에요!
+
+---<
+
+첫 번째로 여러분이 포트폴리오의 중심에 묵직하게 박아두셔야 할 메인 장비주는 바로 '오로스테크놀로지'라는 기업이에요. HBM 층과 층 사이의 오버레이 계측 장비를 국내 유일하게 만드는 무시무시한 기술력을 가진 회사인 거예요.`,
+    step3:(t,n)=>`너는 20년 경력 한국 주식 전문 애널리스트야. 반드시 실제 코스피/코스닥 상장 종목 실명으로 추천. "A사","B사" 절대 금지.\n테마: ${t}\n시황: ${n?.substring(0,300)}\n후보 4~5개, 5가지 검증(테마연관성/실적모멘텀/수급/업사이드/리스크) 후 최종 3~4개.\n마크다운 없이 순수 JSON만:\n{"candidates":[{"name":"실제종목명","code":"6자리코드","verifications":{"theme_relevance":{"pass":true,"reason":""},"earnings_momentum":{"pass":true,"reason":""},"supply_demand":{"pass":true,"reason":""},"upside":{"pass":true,"reason":""},"risk_check":{"pass":true,"reason":""}},"final_pick":true,"pick_reason":"3문장이유","investment_point":"핵심포인트"}]}`,
+    step4:(s,n)=>`너는 한국 소부장 전문 애널리스트야. 실제 상장 소부장 종목 실명 추천. "A사" 금지.\n분야: ${s}\n시황: ${n?.substring(0,300)}\n후보 3~4개, 5가지 검증(공급망연관성/수주실적/기술경쟁력/업사이드/리스크) 후 2~3개.\n마크다운 없이 순수 JSON만:\n{"candidates":[{"name":"실제종목명","code":"6자리코드","verifications":{"supply_chain":{"pass":true,"reason":""},"order_history":{"pass":true,"reason":""},"tech_competency":{"pass":true,"reason":""},"upside":{"pass":true,"reason":""},"risk_check":{"pass":true,"reason":""}},"final_pick":true,"pick_reason":"3문장이유","investment_point":"핵심포인트"}]}`,
+    scriptPrompt:(d)=>`너는 '오늘경제TV' 유튜브 전문 대본 작가야.\n[참고예시]\n${d.sample}\n[스타일] "~거든요","~잖아요","~인 거예요" 구어체. 일상 비유 필수. 실제 종목명+코드 명시. "A사" 금지.\n[시황]${d.narrative}\n[포인트]${d.points}\n[메인테마주]${d.main}\n[소부장]${d.sobu}\n[추가]${d.extra||'없음'}\n[규칙] 글자수5500~7700. ---< 로 문단구분. 24~30문단. 톤:${d.tone}. ---< 부터 바로시작`,
+  },
+  ripple: { name:'리플XRP', type:'coin',
+    tones:['소름돋는분석','긴박·위기감','희망적강세','음모론시각','냉철·팩트'],
+    toneVals:['소름 돋는 분석과 예언적인','위기감과 긴장감이 넘치는','희망적이고 강세론적인','음모론적 시각의','냉철하고 팩트 기반의'],
+    hints:['관련 코인/테마 (예: XRP ETF)','분석 포인트 (예: 기관 매집)'],
+    sample:`안녕하세요, 반갑습니다! 오늘도 우리 구독자 여러분의 소중한 자산을 지켜드리고, 돈의 흐름을 꿰뚫어 볼 수 있는 아주 뜨겁고 싱싱한 소식들 가득 들고 왔거든요. 지금 전 세계적으로 부채 위기와 달러 가치 하락, 그리고 블록체인 기반의 새로운 시대가 오고 있는데, 우리 엑스알피(XRP)가 그 중심에서 어떤 역할을 하게 될지 오늘 아주 낱낱이 파헤쳐 드릴게요.
+
+---<
+
+지금 중동 리스크가 금융 시스템 붕괴를 가속하는 의도적인 연극이라는 시각이 있는데, 사실 보이지 않는 곳에서는 무역 협정과 디지털 결제 인프라 개발이라는 거대한 전환이 소리 없이 이루어지고 있거든요. 오늘 이 영상에서는 왜 금융 시스템이 무너지고 있는지, 그리고 시스템 재편에 왜 리플이 절대적으로 필요한지 그 소름 돋는 이유를 아주 명쾌하게 분석해 드릴게요.
+
+---<
+
+본격적으로 진짜 돈의 설계도를 파헤치기 전에, 오늘 내용이 여러분 투자에 조금이라도 인사이트를 드린다면 좋아요와 구독 한 번씩만 꾹 부탁드릴게요. 여러분의 따뜻한 응원 클릭 한 번이 매일 밤새워 글로벌 뉴스를 분석하고 데이터를 뜯어보는 저한테 정말 엄청난 에너지가 되거든요. 아, 그리고 영상 마지막에는 여러분의 투자 안목을 완전히 바꿔줄 소정의 선물도 준비했으니까 끝까지 집중해서 시청해 주세요! 자, 이제 리플이 앞으로 어떻게 될지, 그 운명을 결정지을 진짜 이야기 시작합니다.
+
+---<
+
+가장 먼저 우리 머릿속을 복잡하게 만드는 '시가총액'의 환상부터 깨야 해요. 뉴스에서 시총이 너무 커서 절대 비싸질 수 없다고 말하는 건, 사실 우리 아파트 단지에 집이 천 채가 있는데 어제 딱 한 집이 비싸게 팔렸다고 해서 모든 집주인 주머니에 현금이 꽉 차 있다고 착각하는 거랑 똑같은 거거든요. 실제로는 시장에 그만큼의 현금이 없어도 호가창에 물량이 마르는 '공급 쇼크'가 터지면 가격은 얼마든지 수직으로 솟구칠 수 있거든요.
+
+---<
+
+지금 일본의 엔캐리 청산 이슈가 아주 뜨거운데, 0% 금리로 돈을 빌려 월스트리트 국채를 사던 시대가 저물고 엔화 가치가 오르기 시작했어요. 유럽과 미국 자본이 일본으로 돌아가면 달러 가치는 떨어지고 국채 매도가 가속화될 수밖에 없거든요. 이런 미국의 경제 대공황과 인플레이션 위기 속에서, 기관들은 이미 비트코인을 제치고 엑스알피를 새로운 타깃으로 삼기 시작했습니다.`,
+    step3:(t,n)=>`너는 암호화폐 전문 분석가야. XRP/리플 관련 코인 분석.\n테마:${t||'XRP 리플'}\n시황:${n?.substring(0,300)}\n후보3~4개, 5가지 검증(XRP생태계연관성/규제명확성/기관수급/업사이드/리스크).\n순수 JSON: {"candidates":[{"name":"코인명","code":"티커","verifications":{"theme_relevance":{"pass":true,"reason":""},"earnings_momentum":{"pass":true,"reason":""},"supply_demand":{"pass":true,"reason":""},"upside":{"pass":true,"reason":""},"risk_check":{"pass":true,"reason":""}},"final_pick":true,"pick_reason":"이유","investment_point":"포인트"}]}`,
+    step4:(s,n)=>`너는 XRPL 생태계 전문가야. XRPL 기반 프로젝트 분석.\n분야:${s||'XRPL DeFi'}\n시황:${n?.substring(0,300)}\n후보2~3개. 순수 JSON: {"candidates":[{"name":"프로젝트명","code":"티커","verifications":{"supply_chain":{"pass":true,"reason":""},"order_history":{"pass":true,"reason":""},"tech_competency":{"pass":true,"reason":""},"upside":{"pass":true,"reason":""},"risk_check":{"pass":true,"reason":""}},"final_pick":true,"pick_reason":"이유","investment_point":"포인트"}]}`,
+    scriptPrompt:(d)=>`너는 리플XRP 전문 유튜브 채널 대본 작가야.\n[참고예시]\n${d.sample}\n[스타일] 거시경제→XRP연결 필수. "소름 돋는","완벽한" 강한 표현. 세력 의도 분석.\n[시황]${d.narrative}\n[코인분석]${d.main}\n[생태계]${d.sobu}\n[추가]${d.extra||'없음'}\n[규칙] 글자수5500~7700. ---< 문단구분. 24~30문단. 톤:${d.tone}. ---< 부터시작`,
+  },
+  shiba:  { name:'시바이누', type:'coin',
+    tones:['개미공감형','긴박·위기감','강세론·희망','세력분석','역발상투자'],
+    toneVals:['개미 심리에 공감하는','위기감과 긴장감이 넘치는','강세론적이고 희망적인','세력의 의도를 분석하는','역발상 투자를 강조하는'],
+    hints:['관련 테마 (예: SHIB 소각)','분석 포인트 (예: 시바리움)'],
+    sample:`피곤한 눈 비벼가며 아무리 차트 공부를 해봐도, 결국 작은 파동에 멘탈이 나가 덜덜 떨며 매도 버튼을 누르고 마는 게 우리 평범한 개미들의 슬픈 현실이잖아요. 팔고 나면 보란 듯이 위로 솟구치는 빨간 기둥을 보면서 뜬눈으로 밤을 지새우는 이 지독하고 억울한 패턴, 이제는 정말 완벽하게 끊어내셔야 해요. 코인판에서 돈을 버는 원리는 진짜 잔인할 정도로 아주 단순하거든요.
+
+---<
+
+바로 세력이 호가창을 짓누르는 '진짜 의도'를 남들보다 딱 반발짝 미리 아는 것, 그거 하나뿐이에요. 최근 영국 BBC가 인정한 '크레이그 해밀턴 파커'라는 예언가가 2026년 암호화폐 시장에 대해 아주 소름 돋는 예언을 내놨거든요. 이 사람이 누구냐면, 과거에 전 세계가 비웃을 때 브렉시트 통과와 트럼프 당선을 정확하게 맞춰서 적중률 85%를 자랑하는 엄청난 인물이에요.
+
+---<
+
+이 엄청난 예언가가 2026년 코인 시장을 두고 이렇게 말했어요. "대규모 정리가 일어날 것이고 수많은 코인들이 흔적도 없이 사라질 것이다. 그런데 그 폭풍 속에서, 모든 사람이 포기했을 때 가장 강하게 돌아오는 코인이 있다." 여기서 가장 중요한 핵심은 바로 "이미 한 번 기적을 만들었던 코인"이라고 콕 집어서 묘사했다는 거예요.
+
+---<
+
+아무도 믿지 않았는데 세상을 완벽하게 뒤집었던 코인, 출시 1년 만에 100만 퍼센트라는 경이로운 상승을 기록했던 코인. 코인 역사상 이 묘사와 정확하게 일치하는 건 시바이누 딱 하나밖에 없잖아요. 대중들은 이 예언을 그저 흥미로운 가십거리나 미신으로 치부하고 넘겨버리지만, 우리는 이걸 철저하게 자본 시장의 '수급과 심리' 관점으로 해석해야 하거든요.
+
+---<
+
+예언가가 말한 "모든 사람이 포기했을 때"라는 문장을 투자 심리학으로 번역해 보면, 바로 '극단적 공포와 거래량 실종' 상태를 의미하는 거예요. 지금 시바이누 커뮤니티나 차트 분위기를 한번 냉정하게 보세요. 검색량은 바닥을 치고 있고, 거래량은 씨가 말랐으며, 대중들은 밈 코인은 끝났다며 욕을 하고 떠나가고 있잖아요.`,
+    step3:(t,n)=>`너는 밈코인 전문 분석가야. 시바이누 관련 밈코인 분석.\n테마:${t||'SHIB 시바이누'}\n시황:${n?.substring(0,300)}\n후보3~4개, 5가지 검증(밈파워/소각메커니즘/고래수급/업사이드/리스크).\n순수 JSON: {"candidates":[{"name":"코인명","code":"티커","verifications":{"theme_relevance":{"pass":true,"reason":""},"earnings_momentum":{"pass":true,"reason":""},"supply_demand":{"pass":true,"reason":""},"upside":{"pass":true,"reason":""},"risk_check":{"pass":true,"reason":""}},"final_pick":true,"pick_reason":"이유","investment_point":"포인트"}]}`,
+    step4:(s,n)=>`너는 시바리움 생태계 전문가야.\n분야:${s||'시바리움 생태계'}\n시황:${n?.substring(0,300)}\n후보2~3개. 순수 JSON: {"candidates":[{"name":"프로젝트명","code":"티커","verifications":{"supply_chain":{"pass":true,"reason":""},"order_history":{"pass":true,"reason":""},"tech_competency":{"pass":true,"reason":""},"upside":{"pass":true,"reason":""},"risk_check":{"pass":true,"reason":""}},"final_pick":true,"pick_reason":"이유","investment_point":"포인트"}]}`,
+    scriptPrompt:(d)=>`너는 시바이누 전문 유튜브 채널 대본 작가야.\n[참고예시]\n${d.sample}\n[스타일] 개미 억울함 공감. 고래 매집 시나리오. 역사적 패턴 비교.\n[시황]${d.narrative}\n[코인분석]${d.main}\n[생태계]${d.sobu}\n[추가]${d.extra||'없음'}\n[규칙] 글자수5500~7700. ---< 문단구분. 24~30문단. 톤:${d.tone}. ---< 부터시작`,
+  },
+  crypto: { name:'크립토툰', type:'coin',
+    tones:['지정학연결','긴박·위기감','스마트머니추적','냉철·팩트','강세론'],
+    toneVals:['지정학과 코인을 연결하는','위기감과 긴장감이 넘치는','스마트머니의 움직임을 추적하는','냉철하고 팩트 기반의','강세론적이고 희망적인'],
+    hints:['분석 코인 (예: BTC, XRP)','지정학 이슈 (예: 중동, 무역전쟁)'],
+    sample:`꽉 막힌 코인판의 흐름을 시원하게 뚫어드리는 시간, 크립토 툰의 정프로 인사드려요. 오늘 아침 뉴스 켜보시고 "아, 이제 진짜 중동에서 3차 대전 터지는 거 아니냐, 내 XRP는 어떡하냐"며 가슴 철렁하신 분들 정말 많으시죠? 오늘 저는 트럼프가 던진 이 거대한 지정학적 폭탄 속에 숨겨진 진짜 세력들의 의도와, 여러분의 XRP가 왜 이 혼돈 속에서 가장 빛나는 황금 동앗줄이 될 수밖에 없는지 아주 낱낱이 까발려 드릴게요.
+
+---<
+
+지금 호가창만 보면 숨이 턱턱 막히고 두려우실 거 다 알아요. 하지만 이럴 때일수록 감정에 휘둘리면 세력들의 완벽한 호구가 될 뿐이거든요. 남들이 공포에 질려 도망칠 때 우리는 차가운 머리로 시장의 본질을 꿰뚫어 봐야 해요.
+
+---<
+
+본격적인 돈 냄새 추적에 들어가기 전에, 이 지독한 공포장 속에서도 멘탈 꽉 잡고 저와 함께 진짜 부의 이동을 끝까지 추적하시겠다는 다짐으로 좋아요와 구독, 알림 설정 한 번씩만 팍팍 눌러주세요. 여러분의 클릭 한 번이 얄팍한 언론의 공포 마케팅에 속지 않고 진짜 팩트만 파헤치는 제게 가장 든든한 무기가 되거든요.
+
+---<
+
+자, 지금 전 세계 자본 시장을 그야말로 패닉에 빠뜨린 엄청난 속보부터 한번 뜯어볼게요. 트럼프 미국 대통령이 미 해군을 동원해서 호르무즈 해협을 드나드는 이란 관련 선박을 전면 봉쇄하는 절차에 즉각 돌입하겠다고 선언해 버렸죠.
+
+---<
+
+오늘 밤 11시를 기점으로 아라비아만과 오만만 등 이란 항구로 오가는 모든 국가의 선박이 강제적인 해상 봉쇄 조치를 받게 돼요. 이란이 얄밉게 유조선 통행료를 뜯어내고 국제 유가를 볼모로 장난치던 꼴을 더 이상 좌시하지 않고, 아예 숨통을 끊어버리겠다는 아주 무시무시한 선전포고를 날린 거예요.`,
+    step3:(t,n)=>`너는 지정학 연계 암호화폐 분석 전문가야.\n테마:${t||'BTC 비트코인'}\n시황:${n?.substring(0,300)}\n지정학 이슈 연결 코인 3~4개, 5가지 검증(지정학연관성/기관수급/온체인데이터/업사이드/리스크).\n순수 JSON: {"candidates":[{"name":"코인명","code":"티커","verifications":{"theme_relevance":{"pass":true,"reason":""},"earnings_momentum":{"pass":true,"reason":""},"supply_demand":{"pass":true,"reason":""},"upside":{"pass":true,"reason":""},"risk_check":{"pass":true,"reason":""}},"final_pick":true,"pick_reason":"이유","investment_point":"포인트"}]}`,
+    step4:(s,n)=>`너는 블록체인 인프라 전문가야.\n분야:${s||'레이어1/레이어2'}\n시황:${n?.substring(0,300)}\n핵심 인프라 2~3개. 순수 JSON: {"candidates":[{"name":"프로젝트명","code":"티커","verifications":{"supply_chain":{"pass":true,"reason":""},"order_history":{"pass":true,"reason":""},"tech_competency":{"pass":true,"reason":""},"upside":{"pass":true,"reason":""},"risk_check":{"pass":true,"reason":""}},"final_pick":true,"pick_reason":"이유","investment_point":"포인트"}]}`,
+    scriptPrompt:(d)=>`너는 크립토툰 유튜브 채널 대본 작가야.\n[참고예시]\n${d.sample}\n[스타일] 반드시 지정학→코인 연결. 공포 마케팅 역발상. 스마트머니 뒷면 분석.\n[시황]${d.narrative}\n[코인분석]${d.main}\n[인프라]${d.sobu}\n[추가]${d.extra||'없음'}\n[규칙] 글자수5500~7700. ---< 문단구분. 24~30문단. 톤:${d.tone}. ---< 부터시작`,
+  },
+  stock:  { name:'그려보는주식', type:'stock_global',
+    tones:['매크로연결분석','긴박·위기감','기회강조','스마트머니추적','냉철·객관적'],
+    toneVals:['매크로와 주식을 연결하는','위기감과 긴장감이 넘치는','기회를 강조하는 희망적인','스마트머니의 움직임을 추적하는','냉철하고 객관적인'],
+    hints:['분석 종목/테마 (예: 테슬라, 빅테크)','매크로 이슈 (예: 유가, 금리)'],
+    sample:`반갑습니다. 복잡한 주식 시장의 얽히고설킨 흐름을 한 폭의 그림처럼 명쾌하게 찢어발겨 드리는 시간, 그려보는 주식의 정프로입니다! 요 며칠 선물 시장이 뚝뚝 떨어지고 기름값이 치솟으면서 "아, 진짜 주식 다 팔고 도망쳐야 하나"라며 밤잠 설치신 분들 정말 많으시죠? 오늘 저는 이 거대한 매크로의 공포 속에 완벽하게 가려져 버린 테슬라의 진짜 미친 호재와, 왜 지금이 빅테크를 쓸어 담아야 할 일생일대의 기회인지 아주 낱낱이 까발려 드릴게요.
+
+---<
+
+본격적인 돈 냄새 추적에 들어가기 전에, 이 지독한 공포장 속에서도 멘탈 꽉 잡고 저와 함께 진짜 부의 이동을 추적하시겠다는 다짐으로 좋아요와 구독, 알림 설정 한 번씩만 팍팍 눌러주세요. 여러분의 클릭 한 번이 얄팍한 언론의 공포 마케팅에 속지 않고 진짜 팩트만 파헤치는 제게 가장 든든한 무기가 되거든요. 자, 지금 전 세계 자본 시장을 짓누르고 있는 거대한 지정학적 노이즈부터 한번 뜯어보겠습니다.
+
+---<
+
+지금 시장 호가창을 보면 그야말로 살얼음판이 따로 없어요. 다우, S&P 500, 나스닥 할 것 없이 선물 시장이 평소의 세 배, 네 배 수준으로 뚝뚝 떨어지고 있죠. 그 이유가 뭘까요? 주말 내내 세상을 시끄럽게 했던 미국과 이란의 휴전 협상이 결국 파투가 나버렸기 때문입니다. 이란은 호르무즈 해협 개방이나 핵무기 양보 같은 핵심 카드들을 끝까지 쥐고 흔들었고, 미국 대표단은 짐을 싸서 고국으로 돌아가 버렸거든요.
+
+---<
+
+협상 결렬의 후폭풍은 생각보다 아주 끔찍합니다. 당장 국제 유가가 미친 듯이 솟구치고 있잖아요. 한때 50달러, 90달러 하던 텍사스 중질유(WTI)가 지금 105달러를 넘어 110달러를 향해 맹렬하게 돌진하고 있습니다. 10년물 국채 금리도 4.36%를 뚫고 올라가 버렸고요. 유가가 뛰면 인플레이션 공포가 살아나고, 금리 인하는 물 건너갔다는 절망감이 시장을 통째로 짓누르는 완벽한 악순환의 고리가 완성된 겁니다.
+
+---<
+
+이런 무시무시한 매크로 환경 속에서 소비자들의 심리마저 꽁꽁 얼어붙었습니다. 미국 소비자 심리지수가 지난달 대비 무려 10% 이상 폭락하며 47포인트대까지 주저앉았어요. 동네 주유소 기름값이 갤런당 6달러, 7달러를 찍는 걸 두 눈으로 보고 있으니 지갑이 열릴 리가 없죠. 트럼프 입장에서도 가을 선거를 앞두고 이 물가 폭등과 이란의 늪에 빠져버린 상황이 엄청난 정치적 부담으로 작용하고 있습니다.`,
+    step3:(t,n)=>`너는 글로벌 주식 전문 애널리스트야.\n테마:${t||'빅테크 나스닥'}\n시황:${n?.substring(0,300)}\n매크로 공포 속 저평가 글로벌 주식 3~4개, 5가지 검증(펀더멘털/밸류에이션/기관수급/업사이드/리스크).\n순수 JSON: {"candidates":[{"name":"종목명","code":"티커","verifications":{"theme_relevance":{"pass":true,"reason":""},"earnings_momentum":{"pass":true,"reason":""},"supply_demand":{"pass":true,"reason":""},"upside":{"pass":true,"reason":""},"risk_check":{"pass":true,"reason":""}},"final_pick":true,"pick_reason":"이유","investment_point":"포인트"}]}`,
+    step4:(s,n)=>`너는 빅테크 공급망 전문가야.\n분야:${s||'반도체 AI 인프라'}\n시황:${n?.substring(0,300)}\n공급망 핵심 부품주 2~3개. 순수 JSON: {"candidates":[{"name":"종목명","code":"티커","verifications":{"supply_chain":{"pass":true,"reason":""},"order_history":{"pass":true,"reason":""},"tech_competency":{"pass":true,"reason":""},"upside":{"pass":true,"reason":""},"risk_check":{"pass":true,"reason":""}},"final_pick":true,"pick_reason":"이유","investment_point":"포인트"}]}`,
+    scriptPrompt:(d)=>`너는 그려보는주식 유튜브 채널 대본 작가야.\n[참고예시]\n${d.sample}\n[스타일] 매크로→주식 연결 필수. 공포 속 숨겨진 호재 역발상. 밸류에이션 바겐세일 논리.\n[시황]${d.narrative}\n[종목분석]${d.main}\n[공급망]${d.sobu}\n[추가]${d.extra||'없음'}\n[규칙] 글자수5500~7700. ---< 문단구분. 24~30문단. 톤:${d.tone}. ---< 부터시작`,
+  },
+};
+
+let scCh='today', scUrls=[], scSteps=[];
+
+function switchSCh(ch, el) {
+  scCh=ch;
+  document.querySelectorAll('[id^="sch-"]').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  scRenderTones();
+  const cfg=SC_CHANNELS[ch];
+  $('sc-hint1-lbl').textContent=cfg.hints[0];
+  $('sc-hint2-lbl').textContent=cfg.hints[1];
+  $('sc-hint1').placeholder='비우면 AI 자동 판단';
+  $('sc-hint2').placeholder='비우면 AI 자동 판단';
+  scUrls=[]; scRenderChips();
+}
+
+function scLoadApiKey(){
+  // 설정탭에 저장된 gemini 키 자동 가져오기
+  const stored=localStorage.getItem('hwak_gemini_key')||'';
+  if(stored && !$('sc-apikey').value) $('sc-apikey').value=stored;
+}
+
+function scRenderTones(){
+  const cfg=SC_CHANNELS[scCh];
+  $('sc-tone-tabs').innerHTML=cfg.tones.map((t,i)=>
+    `<button class="mtab${i===0?' active':''}" data-val="${cfg.toneVals[i]}" onclick="this.parentNode.querySelectorAll('.mtab').forEach(b=>b.classList.remove('active'));this.classList.add('active')">${t}</button>`
+  ).join('');
+}
+
+function scGetTone(){
+  return $('sc-tone-tabs').querySelector('.mtab.active')?.dataset.val || SC_CHANNELS[scCh].toneVals[0];
+}
+
+function scAddUrl(){
+  const inp=$('sc-url-inp'), val=inp.value.trim();
+  if(!val) return;
+  if(!val.startsWith('http')){notify('http로 시작하는 URL 입력','err');return;}
+  if(scUrls.length>=5){notify('최대 5개','err');return;}
+  if(!scUrls.includes(val)) scUrls.push(val);
+  scRenderChips(); inp.value='';
+}
+
+function scRemoveUrl(i){scUrls.splice(i,1);scRenderChips();}
+
+function scRenderChips(){
+  const el=$('sc-url-chips');
+  if(!scUrls.length){el.innerHTML='<div style="font-size:11px;color:var(--tx3)">URL을 추가해주세요</div>';return;}
+  el.innerHTML=scUrls.map((u,i)=>{
+    const yt=u.includes('youtu');
+    return `<div style="display:flex;align-items:center;gap:6px;background:var(--bg2);border:1px solid var(--bd);border-radius:6px;padding:4px 8px;font-size:11px">
+      <span style="font-size:9px;padding:1px 5px;border-radius:8px;font-weight:700;background:${yt?'rgba(239,68,68,.15)':'rgba(91,156,246,.15)'};color:${yt?'#e05252':'#5b9cf6'}">${yt?'YT':'NEWS'}</span>
+      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--tx1)">${u.replace(/^https?:\/\//,'').substring(0,40)}…</span>
+      <span style="cursor:pointer;color:var(--tx3)" onclick="scRemoveUrl(${i})">×</span>
+    </div>`;
+  }).join('');
+}
+
+function scSetPipe(steps){
+  $('sc-pipe').innerHTML=steps.map((s,i)=>{
+    let icon='', color='var(--tx3)';
+    if(s.state==='wait'){icon=String(i+1);}
+    else if(s.state==='run'){icon='↻';color='var(--blue)';}
+    else if(s.state==='done'){icon='✓';color='var(--green)';}
+    else{icon='!';color='var(--red)';}
+    return `<div style="display:flex;gap:8px;align-items:flex-start;padding:6px 0;border-bottom:1px solid var(--bd)">
+      <div style="width:20px;height:20px;border-radius:50%;background:var(--bg3);color:${color};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;${s.state==='run'?'animation:spin .8s linear infinite':''}">${icon}</div>
+      <div style="flex:1">
+        <div style="font-size:11px;font-weight:500;color:var(--tx0)">${s.title}</div>
+        ${s.detail?`<div style="font-size:10px;color:var(--tx2);margin-top:2px">${s.detail}</div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function scGeminiCall(key, prompt, maxTok){
+  const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`,{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{temperature:0.8,maxOutputTokens:maxTok||4096}})
+  });
+  const d=await r.json();
+  if(d.error) throw new Error(d.error.message);
+  return d.candidates?.[0]?.content?.parts?.[0]?.text||'';
+}
+
+async function scGeminiStream(key, prompt, onChunk){
+  const resp=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=${key}`,{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{temperature:0.85,maxOutputTokens:8192}})
+  });
+  if(!resp.ok){const e=await resp.json();throw new Error(e.error?.message||'API오류');}
+  const reader=resp.body.getReader(),decoder=new TextDecoder();
+  let full='';
+  while(true){
+    const{done,value}=await reader.read();if(done)break;
+    for(const line of decoder.decode(value,{stream:true}).split('\n')){
+      if(!line.startsWith('data: '))continue;
+      const data=line.slice(6).trim();if(!data||data==='[DONE]')continue;
+      try{const t=JSON.parse(data).candidates?.[0]?.content?.parts?.[0]?.text;if(t){full+=t;onChunk(full);}}catch(e){}
+    }
+  }
+  return full;
+}
+
+async function scGenerate(){
+  const apiKey=$('sc-apikey').value.trim()||localStorage.getItem('hwak_gemini_key')||'';
+  if(!apiKey){notify('Gemini API 키를 입력해주세요','err');return;}
+  if(!scUrls.length){notify('URL을 1개 이상 추가해주세요','err');return;}
+  const cfg=SC_CHANNELS[scCh];
+  const hint1=$('sc-hint1').value.trim(), hint2=$('sc-hint2').value.trim();
+  const extra=$('sc-extra').value.trim(), tone=scGetTone();
+  const btn=$('sc-gen-btn');
+  btn.disabled=true;btn.textContent='처리 중...';
+  $('sc-output').value='';
+  $('sc-send-btn').style.display='none';
+  $('sc-copy-btn').style.display='none';
+
+  const pipeSteps=[
+    {title:'URL 분석',state:'wait',detail:''},
+    {title:'시황 재구성',state:'wait',detail:''},
+    {title:'메인 분석 5중 검증',state:'wait',detail:''},
+    {title:'서브 분야 5중 검증',state:'wait',detail:''},
+    {title:'대본 생성',state:'wait',detail:''},
+  ];
+  const upd=(i,state,detail)=>{pipeSteps[i]={...pipeSteps[i],state,detail};scSetPipe(pipeSteps);};
+  scSetPipe(pipeSteps);
+
+  try{
+    // STEP 1
+    upd(0,'run',`${scUrls.length}개 URL 분석 중...`);
+    const s1=await scGeminiCall(apiKey,`다음 URL들의 내용을 분석해 핵심 정보 추출. 채널: ${cfg.name}\nURL:\n${scUrls.map((u,i)=>`[${i+1}] ${u}`).join('\n')}\n마크다운 없이 순수 JSON:\n{"sources":[{"url":"","keywords":[],"implications":"","mentioned_sectors":[]}]}`,2000);
+    let srcData; try{srcData=JSON.parse(s1.replace(/\`\`\`json|\`\`\`/g,'').trim());}catch(e){srcData={sources:[]};}
+    upd(0,'done',srcData.sources?.map(s=>s.keywords?.slice(0,3).join(', ')).filter(Boolean).join(' / ')||'완료');
+
+    // STEP 2
+    upd(1,'run','시황 스토리 구성 중...');
+    const s2=await scGeminiCall(apiKey,`소스:${JSON.stringify(srcData)}\n채널:${cfg.name}\n시청자를 위한 시황 스토리 구성. 단순요약 금지, 맥락 풍부하게.\n순수 JSON: {"main_narrative":"400자이상","key_points":[],"suggested_main":"","suggested_sub":""}`,2000);
+    let narr; try{narr=JSON.parse(s2.replace(/\`\`\`json|\`\`\`/g,'').trim());}catch(e){narr={main_narrative:s2,key_points:[],suggested_main:hint1,suggested_sub:hint2};}
+    const fh1=hint1||narr.suggested_main||'주요 테마';
+    const fh2=hint2||narr.suggested_sub||'관련 분야';
+    upd(1,'done',`완료 | ${fh1} | ${fh2}`);
+
+    // STEP 3
+    upd(2,'run','후보 발굴 + 검증 중...');
+    const s3=await scGeminiCall(apiKey,cfg.step3(fh1,narr.main_narrative),3000);
+    let mainData; try{mainData=JSON.parse(s3.replace(/\`\`\`json|\`\`\`/g,'').trim());}catch(e){mainData={candidates:[]};}
+    const mainPicks=mainData.candidates?.filter(c=>c.final_pick)||mainData.candidates?.slice(0,4)||[];
+    upd(2,'done',mainPicks.map(c=>`${c.name}(${c.code})`).join(', ')||'완료');
+
+    // STEP 4
+    upd(3,'run','서브 분야 발굴 중...');
+    const s4=await scGeminiCall(apiKey,cfg.step4(fh2,narr.main_narrative),3000);
+    let sobuData; try{sobuData=JSON.parse(s4.replace(/\`\`\`json|\`\`\`/g,'').trim());}catch(e){sobuData={candidates:[]};}
+    const sobuPicks=sobuData.candidates?.filter(c=>c.final_pick)||sobuData.candidates?.slice(0,3)||[];
+    upd(3,'done',sobuPicks.map(c=>`${c.name}(${c.code})`).join(', ')||'완료');
+
+    // STEP 5
+    upd(4,'run','대본 스트리밍 작성 중...');
+    const mainDesc=mainPicks.map(c=>`- ${c.name}(${c.code}): ${c.pick_reason} | ${c.investment_point}`).join('\n');
+    const sobuDesc=sobuPicks.map(c=>`- ${c.name}(${c.code}): ${c.pick_reason} | ${c.investment_point}`).join('\n');
+    const outEl=$('sc-output');
+    const script=await scGeminiStream(apiKey, cfg.scriptPrompt({
+      sample:cfg.sample, narrative:narr.main_narrative,
+      points:narr.key_points?.join('\n')||'',
+      main:mainDesc||'(완료)', sobu:sobuDesc||'(완료)',
+      extra, tone,
+    }), (p)=>{outEl.value=p;outEl.scrollTop=outEl.scrollHeight;});
+
+    const chars=script.replace(/\s/g,'').length;
+    const paras=(script.match(/---</g)||[]).length;
+    $('sc-chars').textContent=chars.toLocaleString()+'자';
+    $('sc-paras').textContent=paras+'문단';
+    $('sc-send-btn').style.display='';
+    $('sc-copy-btn').style.display='';
+    upd(4,'done',`완료 — ${chars.toLocaleString()}자 / ${paras}문단`);
+    notify('대본 생성 완료!','ok');
+
+  }catch(err){
+    const ri=pipeSteps.findIndex(s=>s.state==='run');
+    if(ri>=0) upd(ri,'err','오류: '+err.message);
+    notify('오류: '+err.message,'err');
+  }
+  btn.disabled=false; btn.textContent='분석 + 대본 생성 ↗';
+}
+
+function scSendToTTS(){
+  const script=$('sc-output').value;
+  if(!script)return;
+  $('tts-script').value=script;
+  gotoPage('tts');
+  notify('TTS 탭으로 대본 전송 완료!','ok');
+}
+
+function scCopy(){
+  navigator.clipboard.writeText($('sc-output').value).then(()=>notify('복사됨','ok'));
+}
+// ═══════════════════════════════════════════════════════════════
 
 // VOICES
 function openVoiceModal(target){voiceTarget=target;$('voice-modal').classList.add('open');if(voices.length===0)loadVoices();else filterVoices();}
